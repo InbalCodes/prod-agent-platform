@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local configuration / secrets
+.env
+.env.*
+!.env.example
+
+# Eval run outputs (datasets are versioned, results are not)
+evals/results/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+# Shared editor settings are versioned; personal ones are not.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
