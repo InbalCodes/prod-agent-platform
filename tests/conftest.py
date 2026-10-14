@@ -23,6 +23,12 @@ async def boom() -> None:
 
 
 @pytest.fixture
+def anyio_backend() -> str:
+    # Async tests run via anyio's pytest plugin (installed with Starlette) on asyncio.
+    return "asyncio"
+
+
+@pytest.fixture
 def settings() -> Settings:
     # _env_file=None: tests must not depend on a developer's local .env
     return Settings(_env_file=None)

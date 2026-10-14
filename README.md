@@ -28,7 +28,7 @@ uv run uvicorn agent_platform.main:create_app --factory --reload
 ```
 
 ```bash
-uv run pytest            # tests
+uv run python -m pytest           # tests
 uv run ruff check .      # lint
 uv run ruff format .     # format
 uv run python -m mypy src tests   # type check

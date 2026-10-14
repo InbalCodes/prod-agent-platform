@@ -27,10 +27,24 @@ One line per request:
 
 uvicorn's own access log is disabled to avoid duplicates without request IDs.
 
+### Model-call log contract (Phase 1a)
+
+Emitted by `InstrumentedLLMClient` for every provider — adapters never log.
+
+| Event | Fields |
+|---|---|
+| `llm_call` | `model`, `output_type`, `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `latency_ms`, `cost_usd`, `stop_reason`, `provider_request_id` |
+| `llm_call_failed` | `model`, `output_type`, `error_type`, `retryable`, `latency_ms` |
+| `llm_price_unknown` | `model` — cost could not be computed; update `llm/pricing.py` |
+
+`provider_request_id` is the provider's own request ID — the key for a support ticket with the provider.
+Cost is an estimate from the versioned price table (`PRICES_AS_OF`), not billing data.
+
 ## Planned
 
-- **Phase 1** — model-call log: `model`, `prompt_version`, `input_tokens`, `output_tokens`,
-  `latency_ms`, `cost_usd`, `stop_reason`; tool-call log: `tool`, `args`, `latency_ms`,
-  `result_count`, `error`. Field names chosen to map onto OpenTelemetry GenAI semantic conventions later.
+- **Phase 1a** — `prompt_version` and grounding fields (`grounding_violations_first_attempt`,
+  `grounding_retry_used`) on the investigation-level log line.
+- **Phase 1b** — tool-call log: `tool`, `args`, `latency_ms`, `result_count`, `error`.
+  Field names chosen to map onto OpenTelemetry GenAI semantic conventions later.
 - **V4** — distributed tracing (OpenTelemetry) + LLM tracing backend (Langfuse / LangSmith — decision pending ADR).
 - Application observability vs LLM/agent observability will be documented here once both exist.

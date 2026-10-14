@@ -33,7 +33,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 - ✅ Structured JSON logs, one format for all loggers
 - ✅ Request ID on every log line and response
 - ✅ Access log with status and duration
-- ⬜ Per model call: model, prompt_version, tokens, latency, cost (Phase 1)
+- 🟡 Per model call: model, tokens, latency, cost, provider request id (prompt_version pending — Phase 1a)
 - ⬜ Per tool call: args, latency, result count, error (Phase 1)
 - ➖ Distributed tracing (V4)
 
@@ -54,7 +54,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 - ➖ Schema migrations, backups (V1)
 
 ## Cost
-- ⬜ Cost per model call computed from usage (Phase 1)
+- ✅ Cost per model call computed from usage (versioned price table)
 - ➖ Cost per successful task (Phase 1b onward)
 
 ## Operations
