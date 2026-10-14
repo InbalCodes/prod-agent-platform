@@ -4,6 +4,7 @@ Clients get a stable error shape and a request_id they can report.
 Internal details (exception messages, stack traces) stay in the logs.
 """
 
+import math
 from collections.abc import Mapping
 from http import HTTPStatus
 from typing import Any
@@ -15,7 +16,16 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from agent_platform.agent.workflow import InvestigationTimeoutError
 from agent_platform.core.request_context import REQUEST_ID_HEADER, get_request_id
+from agent_platform.llm.errors import (
+    LLMError,
+    LLMOutputError,
+    LLMRateLimitError,
+    LLMRequestError,
+    LLMTimeoutError,
+    LLMUnavailableError,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -72,6 +82,44 @@ async def _validation_exception_handler(request: Request, exc: Exception) -> JSO
     )
 
 
+# Most specific first. Provider problems are upstream failures (5xx), not client errors:
+# a provider 429 means *we* are over quota, so the client gets 503 + Retry-After.
+_LLM_ERROR_RESPONSES: list[tuple[type[LLMError], int, str]] = [
+    (LLMRateLimitError, 503, "The language model provider is rate limiting requests."),
+    (LLMTimeoutError, 504, "The language model provider did not respond in time."),
+    (LLMUnavailableError, 503, "The language model provider is unavailable."),
+    (LLMOutputError, 502, "The language model returned no usable output."),
+    (LLMRequestError, 500, "The request to the language model provider was rejected."),
+]
+
+
+async def _llm_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, LLMError)
+    status_code, detail = 500, "Language model error."
+    for error_type, mapped_status, mapped_detail in _LLM_ERROR_RESPONSES:
+        if isinstance(exc, error_type):
+            status_code, detail = mapped_status, mapped_detail
+            break
+
+    headers = {}
+    if isinstance(exc, LLMRateLimitError) and exc.retry_after_s is not None:
+        headers["Retry-After"] = str(math.ceil(exc.retry_after_s))
+
+    log.warning(
+        "llm_error_response",
+        error_type=type(exc).__name__,
+        status_code=status_code,
+        error=str(exc),
+    )
+    return problem_response(request, status_code, detail=detail, headers=headers)
+
+
+async def _investigation_timeout_handler(request: Request, exc: Exception) -> JSONResponse:
+    return problem_response(
+        request, HTTPStatus.GATEWAY_TIMEOUT, detail="The investigation exceeded its time budget."
+    )
+
+
 async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     log.error("unhandled_exception", path=request.url.path, exc_info=exc)
     return problem_response(request, HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -80,4 +128,6 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(StarletteHTTPException, _http_exception_handler)
     app.add_exception_handler(RequestValidationError, _validation_exception_handler)
+    app.add_exception_handler(LLMError, _llm_exception_handler)
+    app.add_exception_handler(InvestigationTimeoutError, _investigation_timeout_handler)
     app.add_exception_handler(Exception, _unhandled_exception_handler)

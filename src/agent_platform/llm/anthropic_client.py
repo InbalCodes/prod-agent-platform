@@ -26,7 +26,6 @@ No logging, timing or cost here — InstrumentedLLMClient does that for every pr
 """
 
 import math
-from typing import Literal
 
 from anthropic import (
     APIConnectionError,
@@ -37,7 +36,7 @@ from anthropic import (
 )
 from pydantic import BaseModel
 
-from agent_platform.llm.client import LLMResult, Usage
+from agent_platform.llm.client import Effort, LLMResult, Usage
 from agent_platform.llm.errors import (
     LLMOutputError,
     LLMRateLimitError,
@@ -45,8 +44,6 @@ from agent_platform.llm.errors import (
     LLMTimeoutError,
     LLMUnavailableError,
 )
-
-Effort = Literal["low", "medium", "high", "xhigh", "max"]
 
 
 def _parse_retry_after(value: str | None) -> float | None:

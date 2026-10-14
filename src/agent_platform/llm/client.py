@@ -1,8 +1,11 @@
 """Provider-neutral LLM contract (see docs/adr/0004-llm-client-protocol.md)."""
 
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel
+
+# Reasoning depth vs. cost/latency. Provider-neutral name; adapters map it.
+Effort = Literal["low", "medium", "high", "xhigh", "max"]
 
 
 class Usage(BaseModel):

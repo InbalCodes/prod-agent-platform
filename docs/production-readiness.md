@@ -16,7 +16,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 ## Reliability
 - ✅ Liveness vs readiness separated
 - 🟡 Graceful shutdown hook (lifespan) — not yet verified with SIGTERM (needs a container)
-- ⬜ Timeouts on every outbound call (Phase 1)
+- ✅ Timeouts on every outbound call: per-attempt LLM timeout + hard investigation deadline
 - ⬜ Bounded agent loop (Phase 1b)
 - ⬜ Retries with backoff + jitter, retry budget (V3)
 - ➖ Idempotency, DLQ, checkpointing (V3)
@@ -24,7 +24,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 ## Security
 - ✅ No internal details in error responses
 - ✅ Untrusted request headers validated before logging (request ID)
-- ⬜ Secrets typed as `SecretStr`, never logged (Phase 1)
+- ✅ Secrets typed as `SecretStr`, never rendered; required outside `local`
 - ⬜ Prompt-injection eval case (Phase 1)
 - ➖ AuthN/AuthZ, rate limiting (before any deployment)
 - ➖ Tool risk levels + human approval (V2)
@@ -33,7 +33,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 - ✅ Structured JSON logs, one format for all loggers
 - ✅ Request ID on every log line and response
 - ✅ Access log with status and duration
-- 🟡 Per model call: model, tokens, latency, cost, provider request id (prompt_version pending — Phase 1a)
+- ✅ Per model call: model, prompt_version, tokens, latency, cost, provider request id
 - ⬜ Per tool call: args, latency, result count, error (Phase 1)
 - ➖ Distributed tracing (V4)
 
@@ -61,4 +61,4 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 - ⬜ Runbook entries for each new failure mode
 
 ## Disaster / failure scenarios
-- ⬜ LLM timeout / 429 / malformed output behavior defined and tested (Phase 1)
+- ✅ LLM timeout / 429 / 5xx / malformed output mapped to explicit statuses and tested (runbook)
