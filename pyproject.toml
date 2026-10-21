@@ -49,4 +49,5 @@ plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]  # lets tests import the top-level `evals` package
 addopts = "-ra"

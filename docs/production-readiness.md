@@ -25,7 +25,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 - ✅ No internal details in error responses
 - ✅ Untrusted request headers validated before logging (request ID)
 - ✅ Secrets typed as `SecretStr`, never rendered; required outside `local`
-- ⬜ Prompt-injection eval case (Phase 1)
+- 🟡 Prompt-injection eval case exists; automated check needs a structural fix (see evals.md)
 - ➖ AuthN/AuthZ, rate limiting (before any deployment)
 - ➖ Tool risk levels + human approval (V2)
 
@@ -38,8 +38,8 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 - ➖ Distributed tracing (V4)
 
 ## Evals
-- ⬜ Versioned incident dataset (Phase 1)
-- ⬜ Deterministic evaluators: grounding, tool usage (Phase 1)
+- ✅ Versioned incident dataset (`incidents_v0`, validated on load)
+- 🟡 Deterministic evaluators: root cause, citations, grounding ✅; security check has known false positives; tool usage (1b)
 - ⬜ Baseline recorded for workflow vs agent (Phase 1)
 - ➖ Thresholds + CI gate (V4)
 

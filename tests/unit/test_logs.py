@@ -89,7 +89,7 @@ def test_query_rejects_unknown_fields_and_oversized_limits() -> None:
 @pytest.mark.parametrize("path", sorted(FIXTURES.glob("*.jsonl")), ids=lambda p: p.stem)
 def test_fixture_files_are_valid_with_unique_ids(path: Path) -> None:
     store = LogStore.from_jsonl(path)
-    ids = [line.id for line in store._lines]
+    ids = [line.id for line in store.lines]
 
     assert ids
     assert len(ids) == len(set(ids))

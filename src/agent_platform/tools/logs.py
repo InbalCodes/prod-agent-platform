@@ -51,6 +51,10 @@ class LogStore:
     def __init__(self, lines: Sequence[LogLine]) -> None:
         self._lines = sorted(lines, key=lambda line: line.timestamp)
 
+    @property
+    def lines(self) -> tuple[LogLine, ...]:
+        return tuple(self._lines)
+
     @classmethod
     def from_jsonl(cls, path: Path) -> "LogStore":
         with path.open(encoding="utf-8") as file:
