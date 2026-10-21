@@ -40,7 +40,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 ## Evals
 - ✅ Versioned incident dataset (`incidents_v0`, validated on load)
 - 🟡 Deterministic evaluators: root cause, citations, grounding ✅; security check has known false positives; tool usage (1b)
-- ⬜ Baseline recorded for workflow vs agent (Phase 1)
+- 🟡 Baseline recorded: workflow ✅ (evals.md); agent (1b) pending
 - ➖ Thresholds + CI gate (V4)
 
 ## Performance
@@ -55,7 +55,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 
 ## Cost
 - ✅ Cost per model call computed from usage (versioned price table)
-- ➖ Cost per successful task (Phase 1b onward)
+- ✅ Cost per successful task measured ($0.050 workflow baseline)
 
 ## Operations
 - ⬜ Runbook entries for each new failure mode

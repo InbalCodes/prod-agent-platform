@@ -25,6 +25,11 @@ Concepts encountered while building. Confidence is self-assessed (1 = heard of i
 | Decorator for cross-cutting telemetry | One log contract for all providers; adapters stay thin | Introduced | Yes | |
 | Error translation at boundaries | SDK exceptions must not leak into domain code; `retryable` drives policy | Exercise | Phase 1a exercise | |
 | PEP 695 generics (`class X[T: Base]`) | Python 3.12+ syntax, ≈ TS `<T extends Base>` | Introduced | Yes | |
+| Statistical power / paired comparison | n=9 detects only collapses; small deltas need hundreds of paired cases | Interview Q (1a) | No | |
+| Effort as a cost lever | Same model at lower effort before switching to a cheaper model | Interview Q (1a) | Configurable | |
+| Record/replay of tool outputs | Logs expire; agent evals must be reproducible after retention | Interview Q (1a) | No (needed in 1b) | |
+| Metric gaming (recall vs precision) | Optimizing recall alone rewards citing everything | Interview Q (1a), seen in data | No | |
+| Eval false positives / human review | Deterministic checks can't judge intent; fix structure first | Experienced (1a v1→v2) | Yes | |
 | Workflow vs agent | Agents cost more and vary more; justify with measurements | Discussed | Phase 1 | |
 | Sync vs async jobs: when to switch | Infra timeouts, HITL, durability, load leveling | Discussed | V3 | |
 | LLM framework landscape (LangChain, LangGraph, …) | Know what each abstraction buys and costs | Discussed | V2 decision | |
