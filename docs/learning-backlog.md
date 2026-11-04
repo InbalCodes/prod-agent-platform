@@ -33,3 +33,4 @@ Concepts encountered while building. Confidence is self-assessed (1 = heard of i
 | Workflow vs agent | Agents cost more and vary more; justify with measurements | Discussed | Phase 1 | |
 | Sync vs async jobs: when to switch | Infra timeouts, HITL, durability, load leveling | Discussed | V3 | |
 | LLM framework landscape (LangChain, LangGraph, …) | Know what each abstraction buys and costs | Discussed | V2 decision | |
+| Concurrent tool execution (`asyncio.gather` ≈ `Promise.all`) | Plan budget sequentially, then execute approved calls in parallel; deferred to V1 when a real log source adds latency (measure first) | Review (1b) | Deferred (V1) | |

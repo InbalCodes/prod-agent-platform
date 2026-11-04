@@ -17,7 +17,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 - ✅ Liveness vs readiness separated
 - 🟡 Graceful shutdown hook (lifespan) — not yet verified with SIGTERM (needs a container)
 - ✅ Timeouts on every outbound call: per-attempt LLM timeout + hard investigation deadline
-- ⬜ Bounded agent loop (Phase 1b)
+- 🟡 Bounded agent loop: max_steps, max_tool_calls, synthesis time reserve inside the deadline (implemented and unit-tested; not yet evaluated against the real model)
 - ⬜ Retries with backoff + jitter, retry budget (V3)
 - ➖ Idempotency, DLQ, checkpointing (V3)
 
@@ -34,7 +34,7 @@ Legend: ✅ done & verified · 🟡 in progress · ⬜ not started · ➖ not ap
 - ✅ Request ID on every log line and response
 - ✅ Access log with status and duration
 - ✅ Per model call: model, prompt_version, tokens, latency, cost, provider request id
-- ⬜ Per tool call: args, latency, result count, error (Phase 1)
+- ✅ Per tool call: args, latency, result count, error (`tool_call`)
 - ➖ Distributed tracing (V4)
 
 ## Evals

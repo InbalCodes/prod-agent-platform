@@ -37,6 +37,16 @@ Emitted by `InstrumentedLLMClient` for every provider — adapters never log.
 | `llm_call_failed` | `model`, `output_type`, `error_type`, `retryable`, `latency_ms` |
 | `llm_price_unknown` | `model` — cost could not be computed; update `llm/pricing.py` |
 
+Model calls inside the agent loop log `output_type="tool_turn"` plus `tool_calls` (count).
+
+### Tool-call log contract (Phase 1b)
+
+| Event | Fields |
+|---|---|
+| `tool_call` | `tool`, `args` (model-chosen input), `latency_ms`, `result_count`, `error` (null on success) |
+
+`args` are logged as the model sent them — including refused ones — so misuse attempts are visible.
+
 `provider_request_id` is the provider's own request ID — the key for a support ticket with the provider.
 Cost is an estimate from the versioned price table (`PRICES_AS_OF`), not billing data.
 

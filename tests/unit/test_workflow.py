@@ -124,8 +124,9 @@ async def test_llm_error_on_first_attempt_propagates() -> None:
         await _investigator(fake).investigate("checkout returns 500")
 
 
-class _SlowLLM:
-    model = "slow-model"
+class _SlowLLM(FakeLLMClient):
+    def __init__(self) -> None:
+        super().__init__([])
 
     async def generate_structured[T: BaseModel](
         self, *, system: str, user: str, output_type: type[T], max_tokens: int = 8192

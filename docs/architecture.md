@@ -64,7 +64,7 @@ Phases are the incremental steps inside a version. Each row says what was actual
 |---|---|---|---|
 | 0 — Walking skeleton | V0 | ✅ done | FastAPI app factory, fail-fast settings, JSON logging with request IDs, problem+json errors, liveness/readiness, 23 tests. No AI. |
 | 1a — Workflow baseline | V0 | ✅ done | Code-driven `search_logs` → one structured-output call → grounding check (+1 corrective retry). LLM client layer with error translation and a telemetry decorator; eval harness on 3 hand-written cases. Baseline: success 0.667, cost per success $0.050; a v1→v2 fix made the security evaluator match human review. |
-| 1b — Agent loop | V0 | ⏳ planned | Model decides the steps in a bounded tool-calling loop; compared against 1a on the same eval set. |
+| 1b — Agent loop | V0 | 🟡 in progress | Model decides the steps in a bounded tool-calling loop; compared against 1a on the same eval set. |
 
 ## Decisions
 

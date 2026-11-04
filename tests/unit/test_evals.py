@@ -50,6 +50,7 @@ def _report(
 def _run(report: InvestigationReport, cost: float | None = 0.01) -> InvestigationRun:
     return InvestigationRun(
         report=report,
+        investigator="workflow",
         prompt_version="v",
         model="m",
         llm_calls=1,

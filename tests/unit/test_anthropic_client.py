@@ -12,10 +12,10 @@ import anthropic
 import httpx2
 import pytest
 from anthropic import AsyncAnthropic
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from agent_platform.llm.anthropic_client import AnthropicClient
-from agent_platform.llm.client import LLMClient
+from agent_platform.llm.client import Conversation, LLMClient, ToolCall, ToolResult, ToolSpec
 from agent_platform.llm.errors import (
     LLMError,
     LLMOutputError,
@@ -56,10 +56,13 @@ class _StubMessages:
         self.calls: list[dict[str, Any]] = []
 
     async def parse(self, **kwargs: Any) -> SimpleNamespace:
-        self.calls.append(kwargs)
+        # Snapshot `messages`: the adapter passes its live, growing history list.
+        self.calls.append({**kwargs, "messages": list(kwargs.get("messages", []))})
         if isinstance(self.outcome, Exception):
             raise self.outcome
         return self.outcome
+
+    create = parse  # tool turns use messages.create; same stub behavior
 
 
 def _client(outcome: SimpleNamespace | Exception) -> tuple[AnthropicClient, _StubMessages]:
@@ -190,3 +193,107 @@ async def test_rate_limit_without_retry_after_header() -> None:
         await _call(client)
 
     assert exc_info.value.retry_after_s is None
+
+
+# --- Phase 1b additions -------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_client_side_validation_error_is_an_output_error() -> None:
+    try:
+        Answer.model_validate({})
+    except ValidationError as exc:
+        validation_error = exc
+    client, _ = _client(validation_error)
+
+    with pytest.raises(LLMOutputError) as exc_info:
+        await _call(client)
+
+    assert exc_info.value.__cause__ is validation_error
+
+
+def _turn_response(*blocks: SimpleNamespace, stop_reason: str = "tool_use") -> SimpleNamespace:
+    response = _response(stop_reason=stop_reason)
+    response.content = list(blocks)
+    return response
+
+
+THINKING = SimpleNamespace(type="thinking", thinking="", signature="sig-opaque")
+TEXT = SimpleNamespace(type="text", text="Checking the gateway.")
+TOOL_USE = SimpleNamespace(
+    type="tool_use", id="toolu_1", name="search_logs", input={"service": "checkout"}
+)
+SPEC = ToolSpec(name="search_logs", description="d", input_schema={"type": "object"})
+
+
+@pytest.mark.anyio
+async def test_next_turn_maps_tool_calls_and_text() -> None:
+    client, _ = _client(_turn_response(THINKING, TEXT, TOOL_USE))
+    conversation = client.start_conversation(system="sys", user="usr", tools=[SPEC])
+
+    turn = await client.next_turn(conversation)
+
+    assert turn.tool_calls == [
+        ToolCall(id="toolu_1", name="search_logs", input={"service": "checkout"})
+    ]
+    assert turn.text == "Checking the gateway."
+    assert turn.stop_reason == "tool_use"
+    assert turn.usage.input_tokens == 1200
+    assert turn.provider_request_id == "req_abc123"
+
+
+@pytest.mark.anyio
+async def test_history_is_append_only_and_replays_blocks_unchanged() -> None:
+    first = _turn_response(THINKING, TOOL_USE)
+    client, messages = _client(first)
+    conversation = client.start_conversation(system="sys", user="usr", tools=[SPEC])
+
+    await client.next_turn(conversation)
+    client.add_tool_results(conversation, [ToolResult(tool_call_id="toolu_1", content="{}")])
+    messages.outcome = _turn_response(TEXT, stop_reason="end_turn")
+    await client.next_turn(conversation)
+
+    sent = messages.calls[1]["messages"]
+    assert sent[0] == {"role": "user", "content": "usr"}
+    assert sent[1]["role"] == "assistant"
+    assert sent[1]["content"] is first.content  # the provider's own blocks, untouched
+    assert sent[2] == {
+        "role": "user",
+        "content": [
+            {"type": "tool_result", "tool_use_id": "toolu_1", "content": "{}", "is_error": False}
+        ],
+    }
+    assert messages.calls[1]["tools"] == [
+        {"name": "search_logs", "description": "d", "input_schema": {"type": "object"}}
+    ]
+
+
+@pytest.mark.anyio
+async def test_truncated_turn_is_an_output_error_and_not_recorded() -> None:
+    client, messages = _client(_turn_response(TOOL_USE, stop_reason="max_tokens"))
+    conversation = client.start_conversation(system="sys", user="usr", tools=[SPEC])
+
+    with pytest.raises(LLMOutputError):
+        await client.next_turn(conversation)
+
+    messages.outcome = _turn_response(TEXT, stop_reason="end_turn")
+    await client.next_turn(conversation)
+    assert len(messages.calls[1]["messages"]) == 1  # the truncated turn was never appended
+
+
+@pytest.mark.anyio
+async def test_next_turn_translates_sdk_errors() -> None:
+    client, _ = _client(_status_error(anthropic.RateLimitError, 429, **{"retry-after": "3"}))
+    conversation = client.start_conversation(system="sys", user="usr", tools=[SPEC])
+
+    with pytest.raises(LLMRateLimitError) as exc_info:
+        await client.next_turn(conversation)
+
+    assert exc_info.value.retry_after_s == 3.0
+
+
+def test_rejects_a_conversation_from_another_client() -> None:
+    client, _ = _client(_response())
+
+    with pytest.raises(TypeError):
+        client.add_tool_results(Conversation(), [])

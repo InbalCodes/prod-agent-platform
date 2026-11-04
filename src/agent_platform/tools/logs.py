@@ -55,6 +55,9 @@ class LogStore:
     def lines(self) -> tuple[LogLine, ...]:
         return tuple(self._lines)
 
+    def services(self) -> frozenset[str]:
+        return frozenset(line.service for line in self._lines)
+
     @classmethod
     def from_jsonl(cls, path: Path) -> "LogStore":
         with path.open(encoding="utf-8") as file:
