@@ -35,7 +35,6 @@ Requirements:
 """
 
 import asyncio
-import json
 import time
 from collections.abc import Collection
 
@@ -218,14 +217,7 @@ class AgentInvestigator:
                         ):
                             services_searched.append(execution.service)
 
-                        # SearchLogsTool returns truncation metadata
-                        # in the first line of result.content.
-                        try:
-                            header = execution.result.content.split("\n", 1)[0]
-                            metadata = json.loads(header)
-                            logs_truncated |= bool(metadata.get("truncated", False))
-                        except (ValueError, TypeError, AttributeError):
-                            pass
+                        logs_truncated |= execution.truncated
 
                     # Every tool_use must receive a tool_result.
                     # One call, preserving the original order.

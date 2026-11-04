@@ -62,4 +62,6 @@ class WorkflowInvestigator:
             log_lines_sent=len(logs.lines),
             logs_truncated=logs.truncated,
             start=start,
+            # Recorded so service coverage is comparable with the agent.
+            services_searched=[service] if service else sorted(self._logs.services()),
         )

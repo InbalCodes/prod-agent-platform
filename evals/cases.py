@@ -33,6 +33,10 @@ class EvalCase(BaseModel):
     # Evidence the report must cite (relevance), independent of grounding.
     must_cite_log_ids: list[str] = Field(default_factory=list)
 
+    # Trajectory: services a good investigation has to look at (e.g. the failing
+    # upstream, not only the service the reporter named).
+    expected_services: list[str] = Field(default_factory=list)
+
     # Security / policy: case-insensitive substrings that must not appear in any
     # hypothesis root_cause or next step (quoting them in the summary is allowed).
     forbidden_phrases: list[str] = Field(default_factory=list)
@@ -55,7 +59,13 @@ def load_dataset(path: Path, fixtures_dir: Path = FIXTURES_DIR) -> list[EvalCase
         fixture = fixtures_dir / case.log_fixture
         if not fixture.exists():
             raise ValueError(f"{case.id}: fixture {fixture} does not exist")
-        known_ids = {line.id for line in LogStore.from_jsonl(fixture).lines}
+        store = LogStore.from_jsonl(fixture)
+        unknown_services = set(case.expected_services) - set(store.services())
+        if unknown_services:
+            raise ValueError(
+                f"{case.id}: expected_services not in fixture: {sorted(unknown_services)}"
+            )
+        known_ids = {line.id for line in store.lines}
         missing = set(case.must_cite_log_ids) - known_ids
         if missing:
             raise ValueError(f"{case.id}: must_cite_log_ids not in fixture: {sorted(missing)}")

@@ -6,7 +6,7 @@ import pytest
 from agent_platform.agent.report import Evidence, Hypothesis, InvestigationReport
 from agent_platform.agent.workflow import InvestigationRun
 from agent_platform.llm.errors import LLMTimeoutError
-from agent_platform.llm.fake import FakeLLMClient
+from agent_platform.llm.fake import FakeLLMClient, FakeTurn
 from evals.cases import EvalCase, load_dataset
 from evals.evaluators import PARTIAL_CREDIT, score
 from evals.run import CaseResult, run_case, summarize
@@ -47,22 +47,27 @@ def _report(
     )
 
 
-def _run(report: InvestigationReport, cost: float | None = 0.01) -> InvestigationRun:
-    return InvestigationRun(
-        report=report,
-        investigator="workflow",
-        prompt_version="v",
-        model="m",
-        llm_calls=1,
-        input_tokens=100,
-        output_tokens=50,
-        cost_usd=cost,
-        latency_ms=1000,
-        log_lines_sent=20,
-        logs_truncated=False,
-        first_attempt_grounded=True,
-        grounding_retry_used=False,
-        final_grounded=True,
+def _run(
+    report: InvestigationReport, cost: float | None = 0.01, **trajectory: object
+) -> InvestigationRun:
+    return InvestigationRun.model_validate(
+        dict(
+            report=report,
+            investigator="workflow",
+            prompt_version="v",
+            model="m",
+            llm_calls=1,
+            input_tokens=100,
+            output_tokens=50,
+            cost_usd=cost,
+            latency_ms=1000,
+            log_lines_sent=20,
+            logs_truncated=False,
+            first_attempt_grounded=True,
+            grounding_retry_used=False,
+            final_grounded=True,
+        )
+        | trajectory
     )
 
 
@@ -128,6 +133,8 @@ def test_dataset_validation_catches_eval_bugs(tmp_path: Path) -> None:
         load_dataset(write(good | {"must_cite_log_ids": ["chk-999"]}), FIXTURES)
     with pytest.raises(ValueError, match="does not exist"):
         load_dataset(write(good | {"log_fixture": "nope.jsonl"}), FIXTURES)
+    with pytest.raises(ValueError, match="expected_services not in fixture"):
+        load_dataset(write(good | {"expected_services": ["billing"]}), FIXTURES)
     with pytest.raises(ValueError, match="both expected and partial"):
         load_dataset(write(good | {"partial_categories": ["deployment_regression"]}), FIXTURES)
 
@@ -162,3 +169,51 @@ def test_summary_counts_failed_runs_in_cost_per_success() -> None:
     assert summary.success_rate == pytest.approx(1 / 3, abs=1e-3)
     assert summary.total_cost_usd == pytest.approx(0.04)
     assert summary.cost_per_successful_task_usd == pytest.approx(0.04)  # not 0.03
+
+
+def test_service_coverage() -> None:
+    case = _case(expected_services=["checkout", "inventory"])
+    report = _report(("deployment_regression", ["chk-004"]))
+
+    assert score(case, _run(report, services_searched=["checkout"])).service_coverage == 0.5
+    assert score(_case(), _run(report)).service_coverage is None  # case sets no expectation
+
+
+@pytest.mark.anyio
+async def test_run_case_with_the_agent_investigator(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(Path(__file__).parents[2])
+    fake = FakeLLMClient(
+        [
+            FakeTurn([("search_logs", {"service": "checkout"})]),
+            FakeTurn(text="done"),
+            _report(("deployment_regression", ["chk-004", "chk-007"])),
+        ]
+    )
+
+    result = await run_case(
+        _case(expected_services=["checkout"]), 1, fake, timeout_s=50, investigator_name="agent"
+    )
+
+    assert result.run is not None and result.run.investigator == "agent"
+    assert result.scores is not None and result.scores.service_coverage == 1.0
+    assert result.success
+
+
+def test_summary_reports_the_trajectory() -> None:
+    case = _case()
+    report = _report(("deployment_regression", ["chk-004", "chk-007"]))
+    runs = [
+        _run(report, agent_steps=2, tool_calls=3, tool_errors=1, loop_stop_reason="model_done"),
+        _run(report, agent_steps=4, tool_calls=1, tool_errors=0, loop_stop_reason="max_steps"),
+    ]
+    results = [
+        CaseResult(case_id="c1", attempt=i, run=r, scores=score(case, r), success=True)
+        for i, r in enumerate(runs, start=1)
+    ]
+
+    summary = summarize(results)
+
+    assert summary.agent_steps_mean == 3
+    assert summary.tool_calls_mean == 2
+    assert summary.tool_error_rate == 0.25
+    assert summary.loop_stop_reasons == {"model_done": 1, "max_steps": 1}

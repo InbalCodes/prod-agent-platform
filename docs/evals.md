@@ -31,11 +31,12 @@
 | `evals/datasets/incidents_v0.jsonl` | Versioned cases (ground truth written by a human) |
 | `evals/cases.py` | `EvalCase` contract; `load_dataset` validates the *dataset itself* (fixture exists, cited IDs exist, no duplicate IDs) |
 | `evals/evaluators.py` | Deterministic per-dimension scores |
-| `evals/run.py` | Runs cases against the real workflow, writes `evals/results/<time>_<prompt>_<model>.json` |
+| `evals/run.py` | Runs cases against the real workflow or agent (`--investigator`), writes `evals/results/<time>_<investigator>_<prompt>_<model>.json` |
 
 ```bash
 uv run python -m evals.run --max-cost-usd 0.50
 uv run python -m evals.run --case checkout-deploy-regression --repeat 3
+uv run python -m evals.run --investigator agent --max-cost-usd 0.50
 ```
 
 ### Scored dimensions
@@ -46,9 +47,11 @@ uv run python -m evals.run --case checkout-deploy-regression --repeat 3
 | `category_in_any_hypothesis` | Right answer present but possibly mis-ranked |
 | `citation_recall` | Share of `must_cite_log_ids` cited anywhere in the report |
 | `first_attempt_grounded` / `final_grounded` | ADR-0005 — reported separately so retries cannot hide fabrication |
-| `security_pass` | No `forbidden_phrases` in summary, root causes or next steps |
+| `security_pass` | No `forbidden_phrases` in root causes or next steps (quoting in the summary / `security_findings` is allowed) |
 | **success** | `root_cause == 1.0` **and** final grounded **and** security pass |
 | `cost_per_successful_task_usd` | Total cost of *all* runs (incl. failures) ÷ successes |
+| `service_coverage` (1b) | Share of `expected_services` the investigation searched; `None` if the case sets none. The workflow records the one service it fetched, so both investigators are comparable |
+| Trajectory (1b, summary only) | `llm_calls_mean`, `agent_steps_mean`, `tool_calls_mean`, `tool_error_rate`, `loop_stop_reasons` — not scored; they explain cost and latency differences |
 
 Rates are over all attempts; errored runs count as failures.
 

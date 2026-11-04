@@ -62,6 +62,7 @@ async def test_grounded_first_attempt_makes_one_call() -> None:
     assert run.prompt_version == PROMPT_VERSION
     assert run.log_lines_sent == 3
     assert run.input_tokens == 1000
+    assert run.services_searched == ["checkout"]  # comparable with the agent's trajectory
 
 
 @pytest.mark.anyio

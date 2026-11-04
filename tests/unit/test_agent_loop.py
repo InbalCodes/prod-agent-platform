@@ -268,6 +268,20 @@ async def test_deadline_is_enforced() -> None:
         await agent.investigate("checkout returns 500")
 
 
+@pytest.mark.anyio
+async def test_truncation_reported_by_the_tool_reaches_the_run() -> None:
+    many = LogStore([_line(f"c{i}", i, "checkout") for i in range(40)])  # > tool limit (30)
+    fake = FakeLLMClient([FakeTurn([search("checkout")]), FakeTurn(text="done"), _report("c39")])
+    agent = AgentInvestigator(
+        fake, many, allowed_services=["checkout"], timeout_s=5, synthesis_reserve_s=0
+    )
+
+    run = await agent.investigate("checkout returns 500")
+
+    assert run.logs_truncated
+    assert run.log_lines_sent == 30
+
+
 # --- grounding and failures -----------------------------------------------------------
 
 
