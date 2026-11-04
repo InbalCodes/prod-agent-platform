@@ -47,6 +47,11 @@ Model calls inside the agent loop log `output_type="tool_turn"` plus `tool_calls
 
 `args` are logged as the model sent them — including refused ones — so misuse attempts are visible.
 
+The same facts are kept on `InvestigationRun` so they survive in eval results without log
+collection: `tool_trace` (per call: `tool`, `args`, `is_error`, `line_ids` returned) and
+`log_line_ids_sent` (exactly what synthesis saw). They answer the first post-incident question
+— *did the model see line X?* — which aggregate counts cannot.
+
 `provider_request_id` is the provider's own request ID — the key for a support ticket with the provider.
 Cost is an estimate from the versioned price table (`PRICES_AS_OF`), not billing data.
 

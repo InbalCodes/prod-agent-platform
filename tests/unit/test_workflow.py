@@ -63,6 +63,7 @@ async def test_grounded_first_attempt_makes_one_call() -> None:
     assert run.log_lines_sent == 3
     assert run.input_tokens == 1000
     assert run.services_searched == ["checkout"]  # comparable with the agent's trajectory
+    assert len(run.log_line_ids_sent) == run.log_lines_sent == 3
 
 
 @pytest.mark.anyio

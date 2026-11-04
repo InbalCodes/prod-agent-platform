@@ -60,6 +60,7 @@ class WorkflowInvestigator:
             model=self._llm.model,
             synthesis=synthesis,
             log_lines_sent=len(logs.lines),
+            log_line_ids_sent=[line.id for line in logs.lines],
             logs_truncated=logs.truncated,
             start=start,
             # Recorded so service coverage is comparable with the agent.

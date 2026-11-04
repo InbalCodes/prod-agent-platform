@@ -52,6 +52,7 @@ from agent_platform.agent.run import (
     InvestigationRun,
     InvestigationTimeoutError,
     LoopStopReason,
+    ToolTrace,
     build_run,
 )
 from agent_platform.agent.synthesis import synthesize_report
@@ -106,6 +107,7 @@ class AgentInvestigator:
         turns: list[Turn] = []
         lines_by_id: dict[str, LogLine] = {}
         services_searched: list[str] = []
+        tool_trace: list[ToolTrace] = []
 
         logs_truncated = False
 
@@ -148,6 +150,7 @@ class AgentInvestigator:
                         break
 
                     results = []
+                    returned_ids: dict[str, list[str]] = {}  # tool_call_id -> line ids
 
                     # 3. Answer every tool call
                     for call in turn.tool_calls:
@@ -206,6 +209,8 @@ class AgentInvestigator:
                             tool_errors += 1
                             continue
 
+                        returned_ids[call.id] = [line.id for line in execution.lines]
+
                         # 4. Collect evidence, deduplicated by ID
                         for line in execution.lines:
                             lines_by_id.setdefault(line.id, line)
@@ -218,6 +223,17 @@ class AgentInvestigator:
                             services_searched.append(execution.service)
 
                         logs_truncated |= execution.truncated
+
+                    # Trace in the same order as the calls, including refused ones.
+                    tool_trace.extend(
+                        ToolTrace(
+                            tool=call.name,
+                            args=call.input,
+                            is_error=result.is_error,
+                            line_ids=returned_ids.get(call.id, []),
+                        )
+                        for call, result in zip(turn.tool_calls, results, strict=True)
+                    )
 
                     # Every tool_use must receive a tool_result.
                     # One call, preserving the original order.
@@ -278,6 +294,8 @@ class AgentInvestigator:
                     turns=turns,
                     report=report,
                     log_lines_sent=len(collected_lines),
+                    log_line_ids_sent=[line.id for line in collected_lines],
+                    tool_trace=tool_trace,
                     logs_truncated=logs_truncated,
                     start=start,
                     agent_steps=agent_steps,

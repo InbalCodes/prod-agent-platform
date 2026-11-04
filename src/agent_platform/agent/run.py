@@ -2,7 +2,7 @@
 
 import time
 from collections.abc import Sequence
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -11,6 +11,15 @@ from agent_platform.agent.synthesis import Synthesis
 from agent_platform.llm.client import LLMResult, Turn
 
 LoopStopReason = Literal["model_done", "max_steps", "max_tool_calls", "time_budget"]
+
+
+class ToolTrace(BaseModel):
+    """One tool call as the model requested it and what it got back (for post-mortems)."""
+
+    tool: str
+    args: dict[str, Any]  # untrusted, exactly as the model sent it
+    is_error: bool
+    line_ids: list[str] = []  # log lines this call returned to the model
 
 
 class InvestigationTimeoutError(Exception):
@@ -28,6 +37,7 @@ class InvestigationRun(BaseModel):
     cost_usd: float | None
     latency_ms: float
     log_lines_sent: int
+    log_line_ids_sent: list[str] = []  # exactly what synthesis saw: "did it see line X?"
     logs_truncated: bool
     first_attempt_grounded: bool
     grounding_retry_used: bool
@@ -38,6 +48,7 @@ class InvestigationRun(BaseModel):
     tool_errors: int = 0
     services_searched: list[str] = []
     loop_stop_reason: LoopStopReason | None = None
+    tool_trace: list[ToolTrace] = []
 
 
 def build_run(
@@ -51,6 +62,8 @@ def build_run(
     log_lines_sent: int,
     logs_truncated: bool,
     start: float,
+    log_line_ids_sent: Sequence[str] = (),
+    tool_trace: Sequence[ToolTrace] = (),
     agent_steps: int = 0,
     tool_calls: int = 0,
     tool_errors: int = 0,
@@ -81,6 +94,7 @@ def build_run(
         cost_usd=None if None in costs else round(sum(c for c in costs if c is not None), 6),
         latency_ms=round((time.perf_counter() - start) * 1000, 2),
         log_lines_sent=log_lines_sent,
+        log_line_ids_sent=list(log_line_ids_sent),
         logs_truncated=logs_truncated,
         first_attempt_grounded=synthesis.first.is_grounded if synthesis else True,
         grounding_retry_used=synthesis.retry_attempted if synthesis else False,
@@ -90,4 +104,5 @@ def build_run(
         tool_errors=tool_errors,
         services_searched=list(services_searched),
         loop_stop_reason=loop_stop_reason,
+        tool_trace=list(tool_trace),
     )

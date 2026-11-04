@@ -282,6 +282,26 @@ async def test_truncation_reported_by_the_tool_reaches_the_run() -> None:
     assert run.log_lines_sent == 30
 
 
+@pytest.mark.anyio
+async def test_run_records_what_each_call_returned_and_what_synthesis_saw() -> None:
+    fake = FakeLLMClient(
+        [
+            FakeTurn([search("checkout", min_level="ERROR"), search("billing-secrets")]),
+            FakeTurn(text="done"),
+            _report("c1"),
+        ]
+    )
+
+    run = await _agent(fake).investigate("checkout returns 500")
+
+    ok, refused = run.tool_trace
+    assert ok.args == {"service": "checkout", "min_level": "ERROR"}
+    assert ok.line_ids == ["c1", "c2"] and not ok.is_error
+    assert refused.is_error and refused.line_ids == []
+    assert refused.args == {"service": "billing-secrets"}  # misuse attempts stay visible
+    assert run.log_line_ids_sent == ["c1", "c2"]
+
+
 # --- grounding and failures -----------------------------------------------------------
 
 
