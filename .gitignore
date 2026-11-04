@@ -29,3 +29,6 @@ Thumbs.db
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
+
+# Private project spec (kept locally)
+production-agent-platform-claude-code.md
